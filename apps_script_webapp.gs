@@ -201,7 +201,7 @@ function gerarDocDePayload(payload) {
         try {
           var blob = UrlFetchApp.fetch(item.foto_ref_url, { muteHttpExceptions: true }).getBlob();
           var img = pImg.appendInlineImage(blob);
-          var maxW = 235;
+          var maxW = 230;
           if (img.getWidth() > maxW) {
             var ratio = img.getHeight() / img.getWidth();
             img.setWidth(maxW).setHeight(Math.round(maxW * ratio));
@@ -211,7 +211,8 @@ function gerarDocDePayload(payload) {
         pImg.appendText("—").setForegroundColor("#999999");
       }
     });
-    try { tabela.setColumnWidth(0, 300); tabela.setColumnWidth(1, 250); } catch (e) {}
+    // larguras em pt: cabem juntas na área útil de uma A4 (~450pt)
+    try { tabela.setColumnWidth(0, 195); tabela.setColumnWidth(1, 250); } catch (e) {}
 
     body.appendParagraph("").setAttributes(st.normal);
     if (tipoIdx < tiposComItens.length - 1) body.appendPageBreak();
