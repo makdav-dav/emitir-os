@@ -5,15 +5,19 @@
 //  gerarDocumentoOS (v13) para um endpoint.
 //
 //  COMO USAR:
-//   1. Cole este arquivo no MESMO projeto Apps Script da planilha
-//      (ou num projeto novo). Ajuste TOKEN abaixo.
-//   2. Implantar → Nova implantação → Tipo: App da Web
-//      Executar como: Eu   |   Acesso: Qualquer pessoa
-//   3. Copie a URL /exec e cole em os_config (OS_WEBAPP_URL);
-//      copie o TOKEN para os_config (OS_WEBAPP_TOKEN).
+//   1. Cole este arquivo no projeto Apps Script.
+//   2. Defina o segredo em Configurações do projeto (engrenagem) →
+//      Propriedades do script → adicione OS_TOKEN = <seu segredo>.
+//      Use o MESMO valor em os_config.OS_WEBAPP_TOKEN no Supabase.
+//   3. Implantar → App da Web (Executar como: Eu · Acesso: Qualquer pessoa).
+//   4. Copie a URL /exec para os_config.OS_WEBAPP_URL.
+//   (O token NÃO fica no código — some o risco de vazar no git.)
 // ============================================================
 
-var TOKEN = "DEFINA_UM_TOKEN_SECRETO";  // ★ igual a os_config.OS_WEBAPP_TOKEN — NÃO comite o valor real
+// Segredo lido das Propriedades do script (não versionado).
+function _token() {
+  return PropertiesService.getScriptProperties().getProperty('OS_TOKEN') || '';
+}
 
 var COR_TIPO = {
   "Jardinagem":  { header: "#1A237E", bg: "#E8EAF6" },
@@ -32,7 +36,9 @@ function doGet() { return _json({ ok: true, msg: "Emitir OS Web App ativo. Use P
 function doPost(e) {
   try {
     var payload = JSON.parse(e.postData.contents);
-    if (payload.token !== TOKEN) return _json({ ok: false, erro: "Token inválido." });
+    var tk = _token();
+    if (!tk) return _json({ ok: false, erro: "Web App sem OS_TOKEN configurado (Propriedades do script)." });
+    if (payload.token !== tk) return _json({ ok: false, erro: "Token inválido." });
 
     // ── ação: geocodificar um endereço ──
     if (payload.action === "geocode") {
