@@ -17,7 +17,7 @@ const COR_TIPO = {
   'Outros':      '#37474F'
 };
 
-let _emCfg = { raio: 2.0, tipos: ['Poda/Corte','Jardinagem','Arborização'], sufixo: ', Campo Largo, PR, Brasil' };
+let _emCfg = { raio: 2.0, tipos: ['Poda/Corte','Jardinagem','Arborização'], sufixo: ', Campo Largo, PR, Brasil', data_limite: '' };
 let _emSolic = [];              // solicitações abertas carregadas
 let _emSel = new Set();         // ids selecionados
 let _emMapa = null, _emLayer = null;
@@ -67,6 +67,7 @@ async function renderEmitir() {
     if (mapa.RAIO_KM) _emCfg.raio = parseFloat(String(mapa.RAIO_KM).replace(',', '.')) || 2.0;
     if (mapa.TIPOS_SERVICO) _emCfg.tipos = mapa.TIPOS_SERVICO.split(',').map(s => s.trim()).filter(Boolean);
     if (mapa.SUFIXO_CIDADE) _emCfg.sufixo = mapa.SUFIXO_CIDADE;
+    _emCfg.data_limite = mapa.OS_DATA_LIMITE || '';
   } catch (e) { /* usa defaults */ }
 
   try {
@@ -262,9 +263,12 @@ function renderPreview(grupos, semGeo) {
   if (semGeo.length) {
     html += `<p class="badge pendente" style="margin-top:12px">${semGeo.length} selecionada(s) sem coordenada — ficam de fora do agrupamento até serem geocodificadas.</p>`;
   }
-  html += `<div class="btn-row" style="margin-top:14px">
-    <button class="btn" onclick="emitirDocumento()" title="Fase 3">Gerar documento da OS →</button>
-  </div><p class="hint">A geração do Google Doc entra na Fase 3 (ponte com o Apps Script).</p></div>`;
+  html += `<div class="sel-tools" style="margin-top:14px">
+    <label class="field" style="margin:0"><span>Data-limite da OS</span>
+      <input type="date" id="em-datalimite" value="${esc(_emCfg.data_limite || '')}"></label>
+    <button class="btn" onclick="emitirDocumento()" style="align-self:end">Gerar documento da OS →</button>
+  </div>
+  <p class="hint">A data-limite é o prazo que sai no texto da OS. Ajuste aqui antes de gerar.</p></div>`;
   box.innerHTML = html;
   box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -300,6 +304,9 @@ async function emitirDocumento() {
     const numRaw = String(cfg.OS_NUMERO || '').trim();
     const numFmt = formatarNumeroOS(numRaw, ano);
     const tiposOrder = (cfg.TIPOS_SERVICO || '').split(',').map(s => s.trim()).filter(Boolean);
+    // data-limite: usa a informada na tela; senão, a da config
+    const dlInput = document.getElementById('em-datalimite');
+    const dataLimiteISO = (dlInput && dlInput.value) ? dlInput.value : (cfg.OS_DATA_LIMITE || '');
 
     // agrupa membros por tipo (na ordem configurada), reordenando por prioridade
     const porTipo = {};
@@ -321,7 +328,8 @@ async function emitirDocumento() {
       token: cfg.OS_WEBAPP_TOKEN || '',
       config: {
         numero_formatado: numFmt, contrato: cfg.OS_CONTRATO || '', empresa: cfg.OS_EMPRESA || '',
-        data_limite: fmtBR(cfg.OS_DATA_LIMITE), template_id: cfg.OS_TEMPLATE_ID || '',
+        data_limite: fmtBR(dataLimiteISO), servicos_desc: cfg.OS_SERVICOS || 'Corte e Poda',
+        template_id: cfg.OS_TEMPLATE_ID || '',
         responsavel1: cfg.OS_RESPONSAVEL1 || '', cargo1: cfg.OS_CARGO1 || '',
         responsavel2: cfg.OS_RESPONSAVEL2 || '', cargo2: cfg.OS_CARGO2 || '',
         tipos_ordem: tiposOrder
@@ -342,7 +350,7 @@ async function emitirDocumento() {
     const [doc] = await sbInsertReturn('os_documentos', {
       numero: numRaw, numero_formatado: numFmt, ano,
       contrato: cfg.OS_CONTRATO || null, empresa: cfg.OS_EMPRESA || null,
-      data_limite: cfg.OS_DATA_LIMITE || null, doc_url: out.url, status: 'emitida',
+      data_limite: dataLimiteISO || null, doc_url: out.url, status: 'emitida',
       responsavel1: cfg.OS_RESPONSAVEL1 || null, cargo1: cfg.OS_CARGO1 || null,
       responsavel2: cfg.OS_RESPONSAVEL2 || null, cargo2: cfg.OS_CARGO2 || null
     });

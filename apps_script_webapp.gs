@@ -109,7 +109,10 @@ function gerarDocDePayload(payload) {
   var body = doc.getBody();
   body.clear();
 
+  var servicos = cfg.servicos_desc || "Corte e Poda";
+
   body.appendParagraph("SECRETARIA MUNICIPAL DE MEIO AMBIENTE").setAttributes(st.titulo);
+  body.appendParagraph("SUPERINTENDÊNCIA DE PRESERVAÇÃO E SUSTENTABILIDADE AMBIENTAL").setAttributes(st.titulo);
   body.appendParagraph("DEPARTAMENTO DE PRODUÇÃO VEGETAL E ARBORIZAÇÃO").setAttributes(st.titulo);
   body.appendParagraph("DIVISÃO DO HORTO MUNICIPAL").setAttributes(st.titulo);
   body.appendParagraph("").setAttributes(st.normal);
@@ -119,15 +122,15 @@ function gerarDocDePayload(payload) {
   body.appendParagraph("").setAttributes(st.normal);
 
   body.appendParagraph(
-    'O Município de Campo Largo, através da Secretaria de Meio Ambiente, considerando o contido no ' +
-    'Contrato n.º ' + (cfg.contrato || "") + ', através da presente ORDEM DE SERVIÇO, orienta que os ' +
-    'serviços de "Poda, Jardinagem e Arborização", deverão ser realizados com possível alteração ' +
-    'devido às intempéries climáticas.'
+    'O Município de Campo Largo, através da Secretaria Municipal de Meio Ambiente de Campo Largo ' +
+    '(SMMA-CL), por meio da Divisão do Horto Municipal, vinculada ao Departamento de Produção Vegetal ' +
+    'e Arborização, através da presente ORDEM DE SERVIÇO, orienta que os serviços de "' + servicos + '", ' +
+    'deverão ser realizados com possível alteração devido às intempéries climáticas.'
   ).setAttributes(st.just);
   body.appendParagraph("").setAttributes(st.normal);
   body.appendParagraph(
-    'Até o dia ' + (cfg.data_limite || "") + ', a empresa deverá informar quanto ao CUMPRIMENTO da ' +
-    'presente Ordem de serviço para a fiscalização do serviço realizado, com o consequente atestado ' +
+    'Até o dia ' + (cfg.data_limite || "") + ', a empresa deverá informar quanto ao cumprimento da ' +
+    'presente Ordem de Serviço para a fiscalização do serviço realizado, com o consequente atestado ' +
     'pelo(a) fiscal de contrato. Conforme especificado abaixo, FAVOR REPASSAR AS DATAS QUE CADA ' +
     'SOLICITAÇÃO FOI ATENDIDA E RETORNAR DADOS A ESTA DIVISÃO:'
   ).setAttributes(st.just);
@@ -182,33 +185,53 @@ function gerarDocDePayload(payload) {
         cel2.setPaddingTop(2).setPaddingBottom(2);
       }
     }
-    // ── Registro fotográfico do tipo: fotos GRANDES e legendadas,
-    //    logo após a tabela (tabela fica limpa, só texto) ──
+    // ── Registro fotográfico: TEXTO à esquerda, FOTO à direita ──
     var comFoto = itens.filter(function(it) { return it.foto_ref_url; });
     if (comFoto.length) {
       body.appendParagraph("").setAttributes(st.normal);
       var pReg = body.appendParagraph("REGISTRO FOTOGRÁFICO — " + String(tipo).toUpperCase());
       pReg.setAttributes(st.esq);
       pReg.editAsText().setForegroundColor(corTipo.header).setFontSize(10);
+
+      var fotoTable = body.appendTable();
+      fotoTable.setBorderWidth(1);
       comFoto.forEach(function(it) {
-        var legenda = ((it.processo && it.processo !== "—") ? it.processo + " — " : "") + it.endereco;
-        var pC = body.appendParagraph(legenda);
-        pC.setAttributes(st.esq);
-        pC.editAsText().setBold(true).setFontSize(9).setForegroundColor("#000000");
+        var row = fotoTable.appendTableRow();
+        var cTxt = row.appendTableCell();
+        var cImg = row.appendTableCell();
+        cTxt.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(6).setPaddingRight(6);
+        cImg.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(6).setPaddingRight(6);
+
+        // texto (label em negrito + valor)
+        var campos = [];
+        if (it.processo && it.processo !== "—") campos.push(["Processo", it.processo]);
+        campos.push(["Local", it.endereco]);
+        if (it.ponto_ref && it.ponto_ref !== "—") campos.push(["Referência", it.ponto_ref]);
+        if (it.trabalho && it.trabalho !== "—") campos.push(["Serviço", it.trabalho]);
+        for (var ci = 0; ci < campos.length; ci++) {
+          var par = (ci === 0) ? cTxt.getChild(0).asParagraph() : cTxt.appendParagraph("");
+          par.setAttributes(st.esq);
+          par.clear();
+          par.appendText(campos[ci][0] + ": ").setBold(true).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
+          par.appendText(campos[ci][1]).setBold(false).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
+        }
+
+        // foto à direita
         try {
           var blob = UrlFetchApp.fetch(it.foto_ref_url, { muteHttpExceptions: true }).getBlob();
-          var pImg = body.appendParagraph("");
-          pImg.setAttributes(st.normal);
+          var pImg = cImg.getChild(0).asParagraph();
+          pImg.setAttributes(st.normal); pImg.clear();
           var img = pImg.appendInlineImage(blob);
-          var maxW = 300;
+          var maxW = 250;
           if (img.getWidth() > maxW) {
             var ratio = img.getHeight() / img.getWidth();
             img.setWidth(maxW).setHeight(Math.round(maxW * ratio));
           }
         } catch (imgErr) {
-          body.appendParagraph("(foto indisponível)").setAttributes(st.normal);
+          cImg.getChild(0).asParagraph().setText("(foto indisponível)").setAttributes(st.normal);
         }
       });
+      try { fotoTable.setColumnWidth(0, 210); fotoTable.setColumnWidth(1, 280); } catch (e) {}
     }
 
     body.appendParagraph("").setAttributes(st.normal);

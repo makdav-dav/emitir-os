@@ -26,6 +26,7 @@ async function renderBaixa() {
 
   const osSel = document.getElementById('bx-os').value;
   const stSel = document.getElementById('bx-status').value;
+  if (stSel === 'isolado') return renderIsolados();
   let q = 'select=*,os_documentos(numero_formatado)&order=os_id.asc,ordem.asc&limit=1000';
   if (osSel) q += '&os_id=eq.' + osSel;
   if (stSel) q += '&status_execucao=eq.' + stSel;
@@ -100,6 +101,59 @@ async function baixaRapida(id, status) {
     showToast(status === 'executado' ? 'Baixa registrada.' : 'Item reaberto.', 'success');
     renderBaixa();
     if (typeof atualizarStats === 'function') atualizarStats();
+  } catch (e) { showToast('Erro: ' + e.message, 'error'); }
+}
+
+/* ── Itens isolados (enviados por WhatsApp, fora da OS) ── */
+let _bxIso = {};
+async function renderIsolados() {
+  const box = document.getElementById('bx-lista');
+  box.innerHTML = '<p class="muted">Carregando…</p>';
+  try {
+    const rows = await sbSelect('os_solicitacoes', "select=*&status=eq.whatsapp&order=criado_em.desc&limit=1000") || [];
+    _bxIso = {}; rows.forEach(r => _bxIso[r.id] = r);
+    document.getElementById('bx-contador').textContent = `${rows.length} isolado(s)`;
+    if (!rows.length) { box.innerHTML = '<p class="muted">Nenhum item isolado (enviado por WhatsApp) ainda.</p>'; return; }
+    box.innerHTML = rows.map(cardIsolado).join('');
+  } catch (e) { box.innerHTML = '<p class="badge pendente">Erro: ' + esc(e.message) + '</p>'; }
+}
+function cardIsolado(s) {
+  const done = !!s.executado;
+  const prio = s.prioridade != null ? ` <span class="badge prio">⚡ ${esc(s.prioridade)}</span>` : '';
+  let rodape;
+  if (done) {
+    rodape = `<div class="bx-done">
+      ${s.data_execucao ? '<span class="meta">✅ ' + dataBR(s.data_execucao) + '</span>' : '<span class="meta">✅ executado</span>'}
+      ${s.obs_execucao ? '<span class="meta">· ' + esc(s.obs_execucao) + '</span>' : ''}
+      <button class="btn danger" onclick="baixaIsolado('${s.id}','aberto')">Reabrir</button>
+    </div>`;
+  } else {
+    rodape = `<div class="bx-quick">
+      <input id="obsi-${s.id}" class="bx-obs-quick" placeholder="observação (opcional)">
+      <button class="btn" onclick="baixaIsolado('${s.id}','executado')">✓ Executado</button>
+    </div>`;
+  }
+  return `<div class="card baixa-card">
+    <div class="bx-row">
+      <div class="bx-info">
+        <b>${esc(s.endereco)}</b>${prio}
+        <div class="meta">${esc(s.tipo_servico || '')}${s.n_processo ? ' · proc. ' + esc(s.n_processo) : ''}${s.trabalho ? ' · ' + esc(s.trabalho) : ''}</div>
+      </div>
+      <span class="badge whatsapp">📱 isolado</span>
+    </div>
+    ${rodape}
+  </div>`;
+}
+async function baixaIsolado(id, status) {
+  try {
+    const done = status === 'executado';
+    const inp = document.getElementById('obsi-' + id);
+    const patch = done
+      ? { executado: true, data_execucao: hojeISO(), obs_execucao: (inp && inp.value.trim()) || null }
+      : { executado: false, data_execucao: null, obs_execucao: null };
+    await sbUpdate('os_solicitacoes', { id: 'eq.' + id }, patch);
+    showToast(done ? 'Baixa registrada.' : 'Item reaberto.', 'success');
+    renderIsolados();
   } catch (e) { showToast('Erro: ' + e.message, 'error'); }
 }
 
