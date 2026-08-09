@@ -78,6 +78,7 @@ async function renderSolicitacoes() {
         <td>${esc(r.trabalho || '')}</td>
         <td><span class="badge ${esc(r.status)}">${esc(r.status)}</span></td>
         <td class="acoes" onclick="event.stopPropagation()">
+          <button class="ic-btn wa-btn" title="Enviar por WhatsApp (item isolado)" onclick="whatsappSolic('${r.id}')">📱</button>
           <button class="ic-btn" title="Editar" onclick="abrirEditarSolicitacao('${r.id}')">✏️</button>
           <button class="ic-btn" title="Excluir" onclick="excluirSolicitacao('${r.id}')">🗑️</button>
         </td>
@@ -142,6 +143,11 @@ function abrirFormSolicitacao(row) {
       <button class="btn secondary" onclick="fecharModal()">Cancelar</button></div>`);
   document.getElementById('modal-box').classList.add('wide');
   if (typeof initSeletorEndereco === 'function') setTimeout(() => initSeletorEndereco(v.lat, v.lng), 60);
+}
+
+function whatsappSolic(id) {
+  const s = _solicCache[id];
+  if (s && typeof abrirWhatsapp === 'function') abrirWhatsapp(s);
 }
 
 async function excluirSolicitacao(id) {

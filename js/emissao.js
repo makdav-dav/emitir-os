@@ -137,6 +137,10 @@ function montarTextoWhatsapp(s) {
 
 function whatsappItem(id) {
   const s = _emSolic.find(x => x.id === id);
+  if (s) abrirWhatsapp(s);
+}
+/* Abre o modal de WhatsApp para uma solicitação (usado no Emitir e no cadastro). */
+function abrirWhatsapp(s) {
   if (!s) return;
   const texto = montarTextoWhatsapp(s);
   abrirModal(`
@@ -147,7 +151,7 @@ function whatsappItem(id) {
     <div class="btn-row">
       <button class="btn" onclick="copiarWA()">Copiar texto</button>
       <button class="btn secondary" onclick="abrirWhatsappWeb()">Abrir no WhatsApp</button>
-      <button class="btn secondary" onclick="marcarWhatsappEnviado('${id}')">Marcar como enviado ✓</button>
+      <button class="btn secondary" onclick="marcarWhatsappEnviado('${s.id}')">Marcar como enviado ✓</button>
       <button class="btn secondary" onclick="fecharModal()">Fechar</button>
     </div>
     <p class="hint" id="wa-msg" style="margin-top:8px"></p>`);
@@ -167,9 +171,11 @@ async function marcarWhatsappEnviado(id) {
   try {
     await sbUpdate('os_solicitacoes', { id: 'eq.' + id }, { status: 'whatsapp' });
     fecharModal();
-    showToast('Marcado como enviado no WhatsApp (saiu do pool).', 'success');
-    _emSel.delete(id);
-    renderEmitir();
+    showToast('Marcado como enviado no WhatsApp.', 'success');
+    if (typeof _emSel !== 'undefined') _emSel.delete(id);
+    const ativa = document.querySelector('.page.active')?.id;
+    if (ativa === 'page-emitir' && typeof renderEmitir === 'function') renderEmitir();
+    else if (ativa === 'page-solicitacoes' && typeof renderSolicitacoes === 'function') renderSolicitacoes();
     if (typeof atualizarStats === 'function') atualizarStats();
   } catch (e) { showToast('Erro: ' + e.message, 'error'); }
 }
