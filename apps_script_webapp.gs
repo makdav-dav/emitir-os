@@ -160,85 +160,57 @@ function gerarDocDePayload(payload) {
     pTipo.editAsText().setForegroundColor(corTipo.header).setFontSize(11);
     body.appendParagraph("").setAttributes(st.normal);
 
-    var tableData = [["N° de Processo", "Data de Entrada", "Endereço", "Ponto de Referência", "Trabalho a ser realizado", "Data de Execução"]];
-    itens.forEach(function(item) {
-      var proc = item.processo || "—";
-      if (item.pendente) proc += "\n(Pendente da OS anterior)";
-      var end = (item.prioridade !== null && item.prioridade !== undefined && item.prioridade !== "")
-        ? "⚡ " + item.endereco : item.endereco;
-      tableData.push([proc, item.data_entrada || "—", end, item.ponto_ref || "—", item.trabalho || "—", item.data_exec || ""]);
-    });
-
-    var tabela = body.appendTable(tableData);
+    // Cada item = um bloco: campos à ESQUERDA, foto à DIREITA.
+    var tabela = body.appendTable();
     tabela.setBorderWidth(1);
+    itens.forEach(function(item) {
+      var temPrio = item.prioridade !== null && item.prioridade !== undefined && item.prioridade !== "";
+      var bg = temPrio ? "#FFF9C4" : (item.pendente ? "#FFE0B2" : corTipo.bg);
 
-    var head = tabela.getRow(0);
-    for (var c = 0; c < 6; c++) {
-      var cel = head.getCell(c);
-      cel.setBackgroundColor(corTipo.header);
-      cel.getChild(0).asParagraph().editAsText().setForegroundColor("#FFFFFF").setBold(true).setFontSize(9).setFontFamily("Arial");
-      cel.setPaddingTop(3).setPaddingBottom(3);
-    }
-    for (var r = 1; r < tabela.getNumRows(); r++) {
-      var it = itens[r - 1];
-      var temPrio = it && it.prioridade !== null && it.prioridade !== undefined && it.prioridade !== "";
-      var bg = temPrio ? "#FFF9C4" : (it && it.pendente ? "#FFE0B2" : ((r % 2 === 0) ? corTipo.bg : "#FFFFFF"));
-      for (var c2 = 0; c2 < 6; c2++) {
-        var cel2 = tabela.getRow(r).getCell(c2);
-        cel2.setBackgroundColor(bg);
-        cel2.getChild(0).asParagraph().editAsText()
-          .setFontSize(9).setFontFamily("Arial").setBold(temPrio || (it && it.pendente)).setForegroundColor("#000000");
-        cel2.setPaddingTop(2).setPaddingBottom(2);
+      var row = tabela.appendTableRow();
+      var cTxt = row.appendTableCell();
+      var cImg = row.appendTableCell();
+      cTxt.setBackgroundColor(bg); cImg.setBackgroundColor(bg);
+      cTxt.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(6).setPaddingRight(6);
+      cImg.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(6).setPaddingRight(6);
+      cImg.setVerticalAlignment(DocumentApp.VerticalAlignment.CENTER);
+
+      var campos = [
+        ["N° de Processo", item.processo || "—"],
+        ["Data de entrada", item.data_entrada || "—"],
+        ["Endereço", (temPrio ? "⚡ " : "") + item.endereco],
+        ["Ponto de Referência", item.ponto_ref || "—"],
+        ["Trabalho a ser realizado", item.trabalho || "—"],
+        ["Data de execução", item.data_exec || ""]
+      ];
+      for (var ci = 0; ci < campos.length; ci++) {
+        var par = (ci === 0) ? cTxt.getChild(0).asParagraph() : cTxt.appendParagraph("");
+        par.setAttributes(st.esq); par.clear();
+        par.appendText(campos[ci][0] + ": ").setBold(true).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
+        par.appendText(String(campos[ci][1])).setBold(false).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
       }
-    }
-    // ── Registro fotográfico: TEXTO à esquerda, FOTO à direita ──
-    var comFoto = itens.filter(function(it) { return it.foto_ref_url; });
-    if (comFoto.length) {
-      body.appendParagraph("").setAttributes(st.normal);
-      var pReg = body.appendParagraph("REGISTRO FOTOGRÁFICO — " + String(tipo).toUpperCase());
-      pReg.setAttributes(st.esq);
-      pReg.editAsText().setForegroundColor(corTipo.header).setFontSize(10);
+      if (item.pendente) {
+        var pp = cTxt.appendParagraph("(Pendente da OS anterior)");
+        pp.setAttributes(st.esq); pp.editAsText().setBold(true).setItalic(true).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
+      }
 
-      var fotoTable = body.appendTable();
-      fotoTable.setBorderWidth(1);
-      comFoto.forEach(function(it) {
-        var row = fotoTable.appendTableRow();
-        var cTxt = row.appendTableCell();
-        var cImg = row.appendTableCell();
-        cTxt.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(6).setPaddingRight(6);
-        cImg.setPaddingTop(6).setPaddingBottom(6).setPaddingLeft(6).setPaddingRight(6);
-
-        // texto (label em negrito + valor)
-        var campos = [];
-        if (it.processo && it.processo !== "—") campos.push(["Processo", it.processo]);
-        campos.push(["Local", it.endereco]);
-        if (it.ponto_ref && it.ponto_ref !== "—") campos.push(["Referência", it.ponto_ref]);
-        if (it.trabalho && it.trabalho !== "—") campos.push(["Serviço", it.trabalho]);
-        for (var ci = 0; ci < campos.length; ci++) {
-          var par = (ci === 0) ? cTxt.getChild(0).asParagraph() : cTxt.appendParagraph("");
-          par.setAttributes(st.esq);
-          par.clear();
-          par.appendText(campos[ci][0] + ": ").setBold(true).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
-          par.appendText(campos[ci][1]).setBold(false).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
-        }
-
-        // foto à direita
+      // foto à direita
+      var pImg = cImg.getChild(0).asParagraph(); pImg.setAttributes(st.normal); pImg.clear();
+      if (item.foto_ref_url) {
         try {
-          var blob = UrlFetchApp.fetch(it.foto_ref_url, { muteHttpExceptions: true }).getBlob();
-          var pImg = cImg.getChild(0).asParagraph();
-          pImg.setAttributes(st.normal); pImg.clear();
+          var blob = UrlFetchApp.fetch(item.foto_ref_url, { muteHttpExceptions: true }).getBlob();
           var img = pImg.appendInlineImage(blob);
-          var maxW = 250;
+          var maxW = 235;
           if (img.getWidth() > maxW) {
             var ratio = img.getHeight() / img.getWidth();
             img.setWidth(maxW).setHeight(Math.round(maxW * ratio));
           }
-        } catch (imgErr) {
-          cImg.getChild(0).asParagraph().setText("(foto indisponível)").setAttributes(st.normal);
-        }
-      });
-      try { fotoTable.setColumnWidth(0, 210); fotoTable.setColumnWidth(1, 280); } catch (e) {}
-    }
+        } catch (imgErr) { pImg.appendText("(foto indisponível)").setFontSize(9).setFontFamily("Arial"); }
+      } else {
+        pImg.appendText("—").setForegroundColor("#999999");
+      }
+    });
+    try { tabela.setColumnWidth(0, 300); tabela.setColumnWidth(1, 250); } catch (e) {}
 
     body.appendParagraph("").setAttributes(st.normal);
     if (tipoIdx < tiposComItens.length - 1) body.appendPageBreak();

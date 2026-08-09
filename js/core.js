@@ -43,8 +43,28 @@ function sessionValida() { return !!session; }
 
 async function onSessionReady() {
   updateAuthUI(true);
+  carregarPapel();
   if (typeof recarregarTudo === 'function') recarregarTudo();
   drainQueue();
+}
+
+/* ── Permissões por papel (admin/editor emitem OS e veem Config) ── */
+let _papel = null;
+function podeAdmin() { return _papel === 'admin' || _papel === 'editor'; }
+async function carregarPapel() {
+  try {
+    const r = await sbRpc('papel_atual', {});
+    _papel = (typeof r === 'string') ? r : (Array.isArray(r) ? r[0] : (r && r.papel_atual)) || null;
+  } catch (e) { _papel = null; }
+  aplicarPermissoes();
+}
+function aplicarPermissoes() {
+  const restrito = !podeAdmin();
+  document.querySelectorAll('.nav-btn[data-p="emitir"], .nav-btn[data-p="config"], .tile-restrito')
+    .forEach(el => { el.style.display = restrito ? 'none' : ''; });
+  // se estava numa página restrita, volta pro início
+  const ativa = document.querySelector('.page.active');
+  if (restrito && ativa && (ativa.id === 'page-emitir' || ativa.id === 'page-config')) showPage('home');
 }
 
 async function aguardarSupabaseLib(ms) {
@@ -270,6 +290,10 @@ function showPage(p) {
   window.scrollTo(0, 0);
 }
 function navTo(p) {
+  if ((p === 'emitir' || p === 'config') && !podeAdmin()) {
+    showToast('Sem permissão para essa área. Fale com um administrador.', 'error');
+    return showPage('home');
+  }
   showPage(p);
   if (p === 'solicitacoes' && typeof renderSolicitacoes === 'function') renderSolicitacoes();
   if (p === 'painel' && typeof renderPainel === 'function') renderPainel();
