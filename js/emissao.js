@@ -131,7 +131,6 @@ function montarTextoWhatsapp(s) {
   if (s.prioridade != null) L.push('⚡ Prioridade ' + s.prioridade);
   if (s.n_processo) L.push('📄 Processo ' + s.n_processo);
   if (s.lat != null && s.lng != null) L.push('🗺️ https://www.google.com/maps?q=' + s.lat + ',' + s.lng);
-  if (s.foto_ref_url) L.push('📷 ' + s.foto_ref_url);
   return L.join('\n');
 }
 
@@ -140,21 +139,50 @@ function whatsappItem(id) {
   if (s) abrirWhatsapp(s);
 }
 /* Abre o modal de WhatsApp para uma solicitação (usado no Emitir e no cadastro). */
+let _waFotoUrl = null;
 function abrirWhatsapp(s) {
   if (!s) return;
+  _waFotoUrl = s.foto_ref_url || null;
   const texto = montarTextoWhatsapp(s);
+  const fotoBloco = _waFotoUrl
+    ? `<img src="${esc(_waFotoUrl)}" style="max-width:160px;border-radius:8px;margin:2px 0 8px">
+       <div class="hint">Copie a foto e o texto e cole no grupo.</div>` : '';
   abrirModal(`
     <h2>Enviar no WhatsApp</h2>
     <p class="hint">Item isolado — não entra na OS. Edite o texto se quiser, copie e mande no grupo.</p>
+    ${fotoBloco}
     <label class="field"><span>Mensagem</span>
-      <textarea id="wa-text" rows="9" style="font-size:13px">${esc(texto)}</textarea></label>
+      <textarea id="wa-text" rows="8" style="font-size:13px">${esc(texto)}</textarea></label>
     <div class="btn-row">
+      ${_waFotoUrl ? '<button class="btn secondary" onclick="copiarFotoWA()">📷 Copiar foto</button>' : ''}
       <button class="btn" onclick="copiarWA()">Copiar texto</button>
       <button class="btn secondary" onclick="abrirWhatsappWeb()">Abrir no WhatsApp</button>
       <button class="btn secondary" onclick="marcarWhatsappEnviado('${s.id}')">Marcar como enviado ✓</button>
       <button class="btn secondary" onclick="fecharModal()">Fechar</button>
     </div>
     <p class="hint" id="wa-msg" style="margin-top:8px"></p>`);
+}
+
+/* Copia a IMAGEM (não o link) para a área de transferência. */
+async function copiarFotoWA() {
+  const msg = document.getElementById('wa-msg');
+  const set = m => { if (msg) msg.textContent = m; };
+  if (!_waFotoUrl) return;
+  try {
+    set('Copiando foto…');
+    const resp = await fetch(_waFotoUrl, { mode: 'cors' });
+    const blob = await resp.blob();
+    const bmp = await createImageBitmap(blob);
+    const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
+    cv.getContext('2d').drawImage(bmp, 0, 0);
+    const png = await new Promise(r => cv.toBlob(r, 'image/png'));
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    set('Foto copiada — cole no WhatsApp (Ctrl+V).');
+    showToast('Foto copiada.', 'success');
+  } catch (e) {
+    set('Não deu para copiar automaticamente — abri a foto numa aba para você copiar.');
+    window.open(_waFotoUrl, '_blank', 'noopener');
+  }
 }
 function copiarWA() {
   const t = document.getElementById('wa-text').value;
