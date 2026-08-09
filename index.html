@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Emitir OS — SMMA Campo Largo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── Barra lateral (vira barra inferior no celular) ── -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark">🌳</div>
+      <div class="bt"><b>Emitir OS</b><span>SMMA · Campo Largo</span></div>
+    </div>
+    <nav class="nav-links">
+      <div class="nav-eyebrow">Fluxo</div>
+      <button class="nav-btn active" data-p="home" onclick="navTo('home')"><span class="ic">🏠</span>Início</button>
+      <button class="nav-btn" data-p="painel" onclick="navTo('painel')"><span class="ic">📊</span>Painel</button>
+      <button class="nav-btn" data-p="solicitacoes" onclick="navTo('solicitacoes')"><span class="ic">📋</span>Solicitações<span id="fila-dot"></span></button>
+      <button class="nav-btn" data-p="emitir" onclick="navTo('emitir')"><span class="ic">🗺️</span>Emitir OS</button>
+      <button class="nav-btn" data-p="baixa" onclick="navTo('baixa')"><span class="ic">✅</span>Baixa</button>
+      <button class="nav-btn" data-p="os" onclick="navTo('os')"><span class="ic">📄</span>OS emitidas</button>
+      <div class="nav-eyebrow">Gestão</div>
+      <button class="nav-btn" data-p="importar" onclick="navTo('importar')"><span class="ic">📥</span>Importar</button>
+      <button class="nav-btn" data-p="config" onclick="navTo('config')"><span class="ic">⚙️</span>Configurações</button>
+    </nav>
+    <div class="side-foot"><span class="muted" style="font-size:11px;color:#7FA890">Arborização & Jardinagem</span></div>
+  </aside>
+
+  <div class="app-main">
+    <header class="topbar">
+      <div class="tb-title" id="topbar-title">Início</div>
+      <div class="spacer"></div>
+      <button id="btn-auth" onclick="handleAuth()"><span id="auth-label">Conectar</span></button>
+    </header>
+    <div class="offline-bar">Sem conexão — trabalhando offline</div>
+
+    <main>
+
+      <!-- ── HOME ── -->
+      <section class="page active" id="page-home">
+        <h1 class="page-title">Ordens de serviço</h1>
+        <p class="page-sub">Departamento de Produção Vegetal e Arborização · Campo Largo/PR</p>
+
+        <div class="stats" id="home-stats">
+          <div class="stat"><div class="n" id="st-abertas">–</div><div class="l">Solicitações abertas</div></div>
+          <div class="stat"><div class="n" id="st-emitidas">–</div><div class="l">OS emitidas</div></div>
+          <div class="stat"><div class="n" id="st-itens">–</div><div class="l">Itens no histórico</div></div>
+        </div>
+
+        <div class="card"><p id="home-status" class="hint" style="margin:0">Conecte-se com sua conta Google autorizada para começar.</p></div>
+
+        <div class="tiles-grid">
+          <div class="card tile" onclick="abrirNovaSolicitacao()">
+            <div class="ic">➕</div><div class="tx"><b>Nova solicitação</b><span>Cadastrar um pedido com endereço e foto</span></div>
+          </div>
+          <div class="card tile" onclick="navTo('emitir')">
+            <div class="ic">🗺️</div><div class="tx"><b>Emitir OS</b><span>Agrupar por proximidade e gerar o documento</span></div>
+          </div>
+          <div class="card tile" onclick="navTo('baixa')">
+            <div class="ic">✅</div><div class="tx"><b>Dar baixa</b><span>Marcar serviços executados com foto</span></div>
+          </div>
+          <div class="card tile" onclick="navTo('importar')">
+            <div class="ic">📥</div><div class="tx"><b>Importar planilha</b><span>Trazer dados do .xlsx de Gestão</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── PAINEL ── -->
+      <section class="page" id="page-painel">
+        <h1 class="page-title">Painel</h1>
+        <p class="page-sub">Visão geral dos serviços: tipo, execução, bairros e concentração no mapa.</p>
+        <div id="painel-lista"><p class="muted">Conecte-se para ver o painel.</p></div>
+      </section>
+
+      <!-- ── IMPORTAR ── -->
+      <section class="page" id="page-importar">
+        <h1 class="page-title">Importar planilha</h1>
+        <p class="page-sub">Lê as abas da planilha de Gestão e traz para o banco.</p>
+
+        <div class="card">
+          <div class="drop" id="drop" onclick="document.getElementById('file-xlsx').click()">
+            <div style="font-size:32px">📄</div>
+            <p><b>Clique ou arraste</b> o arquivo <b>.xlsx</b> aqui</p>
+            <p class="muted" style="font-size:12px">Gestao_Departamento_Arborizacao…xlsx</p>
+          </div>
+          <input type="file" id="file-xlsx" accept=".xlsx,.xls" style="display:none" onchange="importarArquivo(this.files[0])">
+        </div>
+
+        <div class="card" id="import-preview" style="display:none">
+          <h2>Prévia da importação</h2>
+          <div id="import-resumo"></div>
+          <label class="field"><span>O que gravar</span>
+            <select id="import-alvo">
+              <option value="ambos">Solicitações (Entrada) + Histórico (OS Enviadas)</option>
+              <option value="solic">Só solicitações (Entrada Para OS)</option>
+              <option value="hist">Só histórico (OS Enviadas)</option>
+            </select>
+          </label>
+          <div class="btn-row">
+            <button class="btn" id="btn-confirmar-import" onclick="confirmarImport()">Gravar no banco</button>
+            <button class="btn secondary" onclick="cancelarImport()">Cancelar</button>
+          </div>
+          <p class="hint" style="margin-top:10px">Registros já existentes (mesma OS / mesmo processo + endereço) são ignorados — dá para reimportar sem duplicar.</p>
+        </div>
+      </section>
+
+      <!-- ── SOLICITAÇÕES ── -->
+      <section class="page" id="page-solicitacoes">
+        <h1 class="page-title">Solicitações</h1>
+        <p class="page-sub">Os pedidos que aguardam virar OS. Clique numa linha para editar.</p>
+        <div class="sel-tools" style="margin-bottom:14px">
+          <button class="btn" onclick="abrirNovaSolicitacao()">➕ Nova solicitação</button>
+          <select id="solic-filtro" onchange="renderSolicitacoes()">
+            <option value="ativas">Ativas</option>
+            <option value="arquivadas">Arquivadas (histórico)</option>
+            <option value="todas">Todas</option>
+          </select>
+          <button class="btn secondary" onclick="renderSolicitacoes()">Atualizar</button>
+        </div>
+        <div id="solic-lista"><p class="muted">Conecte-se para ver as solicitações.</p></div>
+      </section>
+
+      <!-- ── EMITIR OS ── -->
+      <section class="page" id="page-emitir">
+        <h1 class="page-title">Emitir OS</h1>
+        <p class="page-sub">Selecione os pedidos, agrupe por proximidade e tipo, e gere o documento.</p>
+        <div class="emitir-grid">
+          <div class="col-lista">
+            <div class="card">
+              <div class="sel-tools">
+                <select id="em-filtro-tipo" onchange="renderListaSel()"><option value="">Todos os tipos</option></select>
+                <button class="btn secondary" onclick="marcarTodos(true)">Marcar todos</button>
+                <button class="btn secondary" onclick="marcarTodos(false)">Limpar</button>
+                <span class="muted" id="em-contador"></span>
+              </div>
+              <div id="em-lista"><p class="muted">Conecte-se e cadastre ou importe solicitações.</p></div>
+            </div>
+            <div class="btn-row">
+              <button class="btn" onclick="agruparSelecionadas()">Agrupar e sequenciar →</button>
+              <button class="btn secondary" onclick="renderEmitir()">Recarregar</button>
+            </div>
+            <div id="em-preview"></div>
+          </div>
+          <div class="col-mapa">
+            <div class="card">
+              <h2>Mapa</h2>
+              <div id="mapa"></div>
+              <p class="hint" id="mapa-legenda" style="margin-top:8px">Agrupe para ver os pontos numerados por bloco.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── BAIXA / EXECUÇÃO ── -->
+      <section class="page" id="page-baixa">
+        <h1 class="page-title">Baixa de execução</h1>
+        <p class="page-sub">Marque cada ponto como executado, com data, observação e foto do serviço.</p>
+        <div class="card">
+          <div class="sel-tools">
+            <select id="bx-os" onchange="renderBaixa()"><option value="">Todas as OS</option></select>
+            <select id="bx-status" onchange="renderBaixa()">
+              <option value="aberto">Em aberto</option>
+              <option value="executado">Executados</option>
+              <option value="">Todos</option>
+            </select>
+            <button class="btn secondary" onclick="renderBaixa()">Atualizar</button>
+            <span class="muted" id="bx-contador"></span>
+          </div>
+        </div>
+        <div id="bx-lista"><p class="muted">Conecte-se para ver os itens.</p></div>
+      </section>
+
+      <!-- ── OS EMITIDAS ── -->
+      <section class="page" id="page-os">
+        <h1 class="page-title">OS emitidas</h1>
+        <p class="page-sub">Histórico de ordens de serviço geradas.</p>
+        <div class="sel-tools" style="margin-bottom:14px">
+          <select id="os-filtro" onchange="renderOSEmitidas()">
+            <option value="ativas">Ativas</option>
+            <option value="arquivadas">Arquivadas (histórico)</option>
+            <option value="todas">Todas</option>
+          </select>
+          <button class="btn secondary" onclick="renderOSEmitidas()">Atualizar</button>
+        </div>
+        <div id="os-lista"><p class="muted">Conecte-se para ver o histórico.</p></div>
+      </section>
+
+      <!-- ── CONFIG ── -->
+      <section class="page" id="page-config">
+        <h1 class="page-title">Configurações da OS</h1>
+        <p class="page-sub">Dados que saem no documento e parâmetros de agrupamento.</p>
+        <div id="config-form"><p class="muted">Conecte-se para editar.</p></div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+  <!-- ── Modal genérico ── -->
+  <div class="modal" id="modal">
+    <div class="box" id="modal-box"></div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" async></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- app -->
+  <script src="js/blindagem.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/importacao.js"></script>
+  <script src="js/endereco.js"></script>
+  <script src="js/emissao.js"></script>
+  <script src="js/baixa.js"></script>
+  <script src="js/painel.js"></script>
+  <script src="js/os.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Dados reais / sensível — NÃO publicar
+*.xlsx
+codigo appscript.txt
+
+# Ferramentas locais do editor/agent
+.agents/
+.claude/
+skills-lock.json
+
+# Sistema
+.DS_Store
+Thumbs.db
+desktop.ini
