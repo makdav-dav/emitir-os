@@ -181,13 +181,14 @@ function gerarDocDePayload(payload) {
         ["Endereço", (temPrio ? "⚡ " : "") + item.endereco],
         ["Ponto de Referência", item.ponto_ref || "—"],
         ["Trabalho a ser realizado", item.trabalho || "—"],
-        ["Data de execução", item.data_exec || ""]
+        ["Data de execução", item.data_exec || "_____________"]
       ];
       for (var ci = 0; ci < campos.length; ci++) {
         var par = (ci === 0) ? cTxt.getChild(0).asParagraph() : cTxt.appendParagraph("");
         par.setAttributes(st.esq); par.clear();
         par.appendText(campos[ci][0] + ": ").setBold(true).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
-        par.appendText(String(campos[ci][1])).setBold(false).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
+        var val = String(campos[ci][1]); if (val === "") val = " ";
+        par.appendText(val).setBold(false).setFontSize(9).setFontFamily("Arial").setForegroundColor("#000000");
       }
       if (item.pendente) {
         var pp = cTxt.appendParagraph("(Pendente da OS anterior)");
