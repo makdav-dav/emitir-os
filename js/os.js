@@ -53,7 +53,8 @@ async function renderSolicitacoes() {
   box.innerHTML = '<p class="muted">Carregando…</p>';
   try {
     const arq = (document.getElementById('solic-filtro') || {}).value || 'ativas';
-    let q = 'select=*&order=prioridade.asc.nullslast,criado_em.desc&limit=1000';
+    // Só as que aguardam destino: as já emitidas (OS) ou enviadas (WhatsApp) saem daqui.
+    let q = 'select=*&status=in.(aberta,agrupada)&order=prioridade.asc.nullslast,criado_em.desc&limit=1000';
     if (arq === 'ativas') q += '&arquivado=not.is.true';
     else if (arq === 'arquivadas') q += '&arquivado=is.true';
     const rows = await sbSelect('os_solicitacoes', q) || [];
@@ -91,7 +92,7 @@ async function renderSolicitacoes() {
   } catch (e) { box.innerHTML = '<p class="badge pendente">Erro: ' + esc(e.message) + '</p>'; }
 }
 
-let _tiposCache = ['Poda/Corte', 'Jardinagem', 'Arborização'];
+let _tiposCache = ['Poda/Corte', 'Jardinagem', 'Arborização', 'Outros'];
 function abrirNovaSolicitacao() { abrirFormSolicitacao(null); }
 function abrirEditarSolicitacao(id) { abrirFormSolicitacao(_solicCache[id] || null); }
 
@@ -269,6 +270,7 @@ async function renderConfig() {
     const rows = await sbSelect('os_config', 'select=*&order=chave.asc') || [];
     const t = rows.find(r => r.chave === 'TIPOS_SERVICO');
     if (t && t.valor) _tiposCache = t.valor.split(',').map(s => s.trim()).filter(Boolean);
+    if (!_tiposCache.includes('Outros')) _tiposCache.push('Outros'); // "Outros" sempre disponível
     const campos = rows.map(r => `
       <label class="field"><span>${esc(r.chave)}${r.descricao ? ' — <span class="muted" style="font-weight:400">'+esc(r.descricao)+'</span>' : ''}</span>
         <input data-chave="${esc(r.chave)}" value="${esc(r.valor || '')}"></label>`).join('');

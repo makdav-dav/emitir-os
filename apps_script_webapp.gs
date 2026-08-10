@@ -102,7 +102,7 @@ function _nomeMes(m) {
 //                    responsavel1, cargo1, responsavel2, cargo2,
 //                    template_id, tipos_ordem: ["Poda/Corte", ...] },
 //   tipos: [ { tipo, itens: [ { processo, data_entrada, endereco,
-//              ponto_ref, trabalho, data_exec, prioridade, pendente } ] } ]
+//              ponto_ref, trabalho, data_exec, observacao, prioridade, pendente } ] } ]
 // }
 function gerarDocDePayload(payload) {
   var cfg = payload.config || {};
@@ -181,7 +181,8 @@ function gerarDocDePayload(payload) {
         ["Endereço", (temPrio ? "⚡ " : "") + item.endereco],
         ["Ponto de Referência", item.ponto_ref || "—"],
         ["Trabalho a ser realizado", item.trabalho || "—"],
-        ["Data de execução", item.data_exec || "_____________"]
+        ["Data de execução", item.data_exec || "_____________"],
+        ["Observação", item.observacao || "_____________"]
       ];
       for (var ci = 0; ci < campos.length; ci++) {
         var par = (ci === 0) ? cTxt.getChild(0).asParagraph() : cTxt.appendParagraph("");

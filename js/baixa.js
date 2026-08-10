@@ -6,9 +6,33 @@
    ================================================================ */
 
 let _bxItens = {};   // id → item (cache p/ o modal)
+let _bxLista = [];   // lista carregada (p/ busca client-side, sem refetch)
+let _bxModo = 'itens'; // 'itens' | 'isolado'
 
 function hojeISO() { return new Date().toISOString().slice(0, 10); }
 function dataBR(iso) { return iso ? String(iso).split('-').reverse().join('/') : ''; }
+
+/* Termo de busca atual (processo, endereço, referência, trabalho, tipo). */
+function _bxTermo() { return (document.getElementById('bx-busca')?.value || '').trim().toLowerCase(); }
+function _bxCasa(o, termo) {
+  if (!termo) return true;
+  const alvo = [o.n_processo, o.endereco, o.ponto_referencia, o.trabalho, o.tipo_servico]
+    .map(x => String(x || '').toLowerCase()).join(' ');
+  return alvo.includes(termo);
+}
+/* Reaplica a busca sobre o que já está carregado (sem ir ao banco a cada tecla). */
+function filtrarBaixa() {
+  const box = document.getElementById('bx-lista');
+  if (!box) return;
+  const termo = _bxTermo();
+  const vis = _bxLista.filter(o => _bxCasa(o, termo));
+  const cont = document.getElementById('bx-contador');
+  const rotulo = _bxModo === 'isolado' ? 'isolado(s)' : 'item(ns)';
+  if (cont) cont.textContent = `${vis.length}${termo ? ' de ' + _bxLista.length : ''} ${rotulo}`;
+  if (!_bxLista.length) { box.innerHTML = '<p class="muted">Nenhum item com esse filtro.</p>'; return; }
+  if (!vis.length) { box.innerHTML = '<p class="muted">Nada encontrado para “' + esc(termo) + '”.</p>'; return; }
+  box.innerHTML = vis.map(_bxModo === 'isolado' ? cardIsolado : cardBaixa).join('');
+}
 
 async function renderBaixa() {
   const box = document.getElementById('bx-lista');
@@ -27,6 +51,7 @@ async function renderBaixa() {
   const osSel = document.getElementById('bx-os').value;
   const stSel = document.getElementById('bx-status').value;
   if (stSel === 'isolado') return renderIsolados();
+  _bxModo = 'itens';
   let q = 'select=*,os_documentos(numero_formatado)&order=os_id.asc,ordem.asc&limit=1000';
   if (osSel) q += '&os_id=eq.' + osSel;
   if (stSel) q += '&status_execucao=eq.' + stSel;
@@ -35,9 +60,8 @@ async function renderBaixa() {
     const itens = await sbSelect('os_itens', q) || [];
     _bxItens = {};
     itens.forEach(i => _bxItens[i.id] = i);
-    document.getElementById('bx-contador').textContent = `${itens.length} item(ns)`;
-    if (!itens.length) { box.innerHTML = '<p class="muted">Nenhum item com esse filtro.</p>'; return; }
-    box.innerHTML = itens.map(cardBaixa).join('');
+    _bxLista = itens;
+    filtrarBaixa();
   } catch (e) {
     box.innerHTML = '<p class="badge pendente">Erro: ' + esc(e.message) + '</p>';
   }
@@ -109,12 +133,13 @@ let _bxIso = {};
 async function renderIsolados() {
   const box = document.getElementById('bx-lista');
   box.innerHTML = '<p class="muted">Carregando…</p>';
+  _bxModo = 'isolado';
   try {
     const rows = await sbSelect('os_solicitacoes', "select=*&status=eq.whatsapp&order=criado_em.desc&limit=1000") || [];
     _bxIso = {}; rows.forEach(r => _bxIso[r.id] = r);
-    document.getElementById('bx-contador').textContent = `${rows.length} isolado(s)`;
-    if (!rows.length) { box.innerHTML = '<p class="muted">Nenhum item isolado (enviado por WhatsApp) ainda.</p>'; return; }
-    box.innerHTML = rows.map(cardIsolado).join('');
+    _bxLista = rows;
+    if (!rows.length) { document.getElementById('bx-contador').textContent = '0 isolado(s)'; box.innerHTML = '<p class="muted">Nenhum item isolado (enviado por WhatsApp) ainda.</p>'; return; }
+    filtrarBaixa();
   } catch (e) { box.innerHTML = '<p class="badge pendente">Erro: ' + esc(e.message) + '</p>'; }
 }
 function cardIsolado(s) {

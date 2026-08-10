@@ -166,6 +166,7 @@
         <p class="page-sub">Marque cada ponto como executado, com data, observação e foto do serviço.</p>
         <div class="card">
           <div class="sel-tools">
+            <input type="search" id="bx-busca" oninput="filtrarBaixa()" placeholder="🔎 Buscar por processo, endereço, referência…" style="flex:1;min-width:180px">
             <select id="bx-os" onchange="renderBaixa()"><option value="">Todas as OS</option></select>
             <select id="bx-status" onchange="renderBaixa()">
               <option value="aberto">Em aberto</option>

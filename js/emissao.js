@@ -17,7 +17,7 @@ const COR_TIPO = {
   'Outros':      '#37474F'
 };
 
-let _emCfg = { raio: 2.0, tipos: ['Poda/Corte','Jardinagem','Arborização'], sufixo: ', Campo Largo, PR, Brasil', data_limite: '' };
+let _emCfg = { raio: 2.0, tipos: ['Poda/Corte','Jardinagem','Arborização','Outros'], sufixo: ', Campo Largo, PR, Brasil', data_limite: '' };
 let _emSolic = [];              // solicitações abertas carregadas
 let _emSel = new Set();         // ids selecionados
 let _emMapa = null, _emLayer = null;
@@ -66,6 +66,7 @@ async function renderEmitir() {
     const mapa = Object.fromEntries(cfg.map(r => [r.chave, r.valor]));
     if (mapa.RAIO_KM) _emCfg.raio = parseFloat(String(mapa.RAIO_KM).replace(',', '.')) || 2.0;
     if (mapa.TIPOS_SERVICO) _emCfg.tipos = mapa.TIPOS_SERVICO.split(',').map(s => s.trim()).filter(Boolean);
+    if (!_emCfg.tipos.includes('Outros')) _emCfg.tipos.push('Outros'); // "Outros" sempre no fim da ordem
     if (mapa.SUFIXO_CIDADE) _emCfg.sufixo = mapa.SUFIXO_CIDADE;
     _emCfg.data_limite = mapa.OS_DATA_LIMITE || '';
   } catch (e) { /* usa defaults */ }
@@ -353,7 +354,7 @@ async function emitirDocumento() {
       itens: porTipo[t].map(p => ({
         processo: p.n_processo || '', data_entrada: fmtBR(p.data_entrada), endereco: p.endereco,
         ponto_ref: p.ponto_referencia || '', trabalho: p.trabalho || '', data_exec: '',
-        prioridade: (p.prioridade == null ? '' : p.prioridade), pendente: !!p.pendente,
+        observacao: '', prioridade: (p.prioridade == null ? '' : p.prioridade), pendente: !!p.pendente,
         foto_ref_url: p.foto_ref_url || ''
       }))
     }));
